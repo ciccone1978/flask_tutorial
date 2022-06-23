@@ -14,3 +14,6 @@ db migration
 
 shell context
     (venv)> flask shell
+
+SMTP debugging
+    (venv)> python -m smtpd -n -c DebuggingServer localhost:8025    
