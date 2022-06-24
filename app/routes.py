@@ -1,10 +1,11 @@
+#from crypt import methods
 from flask import render_template, flash, redirect, url_for, request
 from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.urls import url_parse
 from datetime import datetime
 from app import app, db
-from app.forms import LoginForm, RegistrationForm, EditProfileForm, EmptyForm
-from app.models import User
+from app.forms import LoginForm, RegistrationForm, EditProfileForm, EmptyForm, PostForm
+from app.models import User, Post
 
 @app.before_request
 def before_request():
@@ -15,22 +16,20 @@ def before_request():
 #
 # index view
 #
-@app.route('/')
-@app.route('/index')
+@app.route('/', methods=['GET', 'POST'])
+@app.route('/index', methods=['GET', 'POST'])
 @login_required
 def index():
-    posts = [
-        {
-            'author': {'username': 'John'},
-            'body': 'Beautiful day in Portland!'
-        },
-        {
-            'author': {'username': 'Susan'},
-            'body': 'The Avengers movie was so cool!'
-        }
-    ]
+    form = PostForm()
+    if form.validate_on_submit():
+        post = Post(body=form.post.data, author=current_user)
+        db.session.add(post)
+        db.session.commit()
+        flash('Your post is now live!')
+        return redirect(url_for('index'))
 
-    return render_template('index.html', title='Hello World', posts=posts)
+    posts = current_user.followed_posts().all()
+    return render_template('index.html', title='Home page', posts=posts, form=form)
 
 #
 # login view
@@ -115,7 +114,9 @@ def edit_profile():
         form.about_me.data = current_user.about_me
     return render_template('edit_profile.html', title='Edit Profile', form=form)
 
-
+#
+#follow
+#
 @app.route('/follow/<username>', methods=['POST'])
 @login_required
 def follow(username):
@@ -135,6 +136,9 @@ def follow(username):
     else:
         return redirect(url_for('index'))    
 
+#
+#unfollow
+#
 @app.route('/unfollow/<username>', methods=['POST'])
 @login_required
 def unfollow(username):
@@ -153,3 +157,9 @@ def unfollow(username):
         return redirect(url_for('user', username=username))
     else:
         return redirect(url_for('index'))
+
+@app.route('/explore')
+@login_required
+def explore():
+    posts = Post.query.order_by(Post.timestamp.desc()).all()        
+    return render_template('index.html', title='Explore', posts=posts)
