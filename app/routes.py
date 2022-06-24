@@ -87,11 +87,7 @@ def register():
 @login_required
 def user(username):
     u = User.query.filter_by(username=username).first_or_404()
-    
-    posts = [
-        {'author': u, 'body': 'Test post #1'},
-        {'author': u, 'body': 'Test post #2'}
-    ]
+    posts = Post.query.filter_by(author=u).order_by(Post.timestamp.desc()).all()
 
     form = EmptyForm()
     return render_template('user.html', user=u, posts=posts, form=form)
