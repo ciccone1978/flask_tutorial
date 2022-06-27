@@ -28,8 +28,22 @@ def index():
         flash('Your post is now live!')
         return redirect(url_for('index'))
 
-    posts = current_user.followed_posts().all()
-    return render_template('index.html', title='Home page', posts=posts, form=form)
+    #pagination
+    #http://localhost:5000/index?page=3
+    page = request.args.get('page', 1, type=int)
+    posts = current_user.followed_posts().paginate(page, app.config['POSTS_PER_PAGE'], False)
+    if posts.has_next:
+        next_url = url_for('index', page=posts.next_num)
+    else:
+        next_url = None
+
+    if posts.has_prev:
+        prev_url = url_for('index', page=posts.prev_num)
+    else:
+        prev_url = None    
+
+    return render_template('index.html', title='Home page', posts=posts.items, form=form, 
+        next_url=next_url, prev_url=prev_url)
 
 #
 # login view
@@ -87,10 +101,21 @@ def register():
 @login_required
 def user(username):
     u = User.query.filter_by(username=username).first_or_404()
-    posts = Post.query.filter_by(author=u).order_by(Post.timestamp.desc()).all()
+    #pagination
+    page = request.args.get('page', 1, type=int)
+    posts = Post.query.filter_by(author=u).order_by(Post.timestamp.desc()).paginate(page, app.config['POSTS_PER_PAGE'], False)
+    if posts.has_next:
+        next_url = url_for('user', username=username, page=posts.next_num)
+    else:
+        next_url = None
+
+    if posts.has_prev:
+        prev_url = url_for('user', username=username, page=posts.prev_num)
+    else:
+        prev_url = None       
 
     form = EmptyForm()
-    return render_template('user.html', user=u, posts=posts, form=form)
+    return render_template('user.html', user=u, posts=posts.items, form=form, next_url=next_url, prev_url=prev_url)
 
 #
 # Edit Profile view
@@ -157,5 +182,17 @@ def unfollow(username):
 @app.route('/explore')
 @login_required
 def explore():
-    posts = Post.query.order_by(Post.timestamp.desc()).all()        
-    return render_template('index.html', title='Explore', posts=posts)
+    #pagination
+    page = request.args.get('pagee', 1, type=int)
+    posts = Post.query.order_by(Post.timestamp.desc()).paginate(page, app.config['POSTS_PER_PAGE'], False)
+    if posts.has_next:
+        next_url = url_for('index', page=posts.next_num)
+    else:
+        next_url = None
+
+    if posts.has_prev:
+        prev_url = url_for('index', page=posts.prev_num)
+    else:
+        prev_url = None       
+
+    return render_template('index.html', title='Explore', posts=posts.items, next_url=next_url, prev_url=prev_url)
